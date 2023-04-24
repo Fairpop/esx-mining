@@ -12,7 +12,7 @@ Forked by Fairpop and made to work with OXTarget, ESX Progressbar and ESX Contex
 
 ## Dependencies
 - [Esx-Legacy](https://github.com/esx-framework/esx-legacy)
-- [Qtarget](https://github.com/overextended/qtarget)
+- [OX_Target](https://github.com/overextended/ox_target)
 - [PolyZone](https://github.com/mkafrin/PolyZone)
 
 ## Installation
