@@ -1,5 +1,6 @@
 # ESX-Mining
 Mining Script for ESX
+Forked by Fairpop and made to work with OXTarget, ESX Progressbar and ESX Context
 
 ## Whats included
 - Easy to use config
