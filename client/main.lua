@@ -22,40 +22,32 @@ local function StartMining(mining)
   local miningtimer = MiningJob.MiningTimer
   isMining = true
   TriggerEvent('esx-mining:miningwithaxe')
-  FreezeEntityPosition(Ped, true)
-    TriggerEvent("mythic_progbar:client:progress", {
-      name = "Mining",
-      duration = miningtimer,
-      label = Config.Text['Mining_ProgressBar'],
-      useWhileDead = false,
-      canCancel = true,
-      controlDisables = {
-          disableMovement = true,
-          disableCarMovement = true,
-          disableMouse = false,
-          disableCombat = true,
-      },animation = {}}, function(status)
-        if not status then
+  ESX.Progressbar(Config.Text['Mining_ProgressBar'], miningtimer, {
+    FreezePlayer = true,
+    animation = {
+      type = 'anim',
+      dict = animDict,
+      lib = animName
+    },
+    onFinish = function()
+      ClearPedTasks(Ped)
       TriggerServerEvent('esx-mining:setMiningStage', "isMined", true, mining)
       TriggerServerEvent('esx-mining:setMiningStage', "isOccupied", false, mining)
       TriggerServerEvent('esx-mining:receivedStone')
       TriggerServerEvent('esx-mining:setMiningTimer')
       isMining = false
-      TaskPlayAnim(Ped, animDict, "exit", 3.0, 3.0, -1, 2, 0, 0, 0, 0)
       DetachEntity(pickaxeprop, 1, true)
       DeleteEntity(pickaxeprop)
-      FreezeEntityPosition(Ped, false)
-      else 
+    end, onCancel = function()
       ClearPedTasks(Ped)
       TriggerServerEvent('esx-mining:setMiningStage', "isOccupied", false, mining)
       isMining = false
-      TaskPlayAnim(Ped, animDict, "exit", 3.0, 3.0, -1, 2, 0, 0, 0, 0)
-      FreezeEntityPosition(Ped, false)
       DetachEntity(pickaxeprop, 1, true)
       DeleteEntity(pickaxeprop)
       DeleteObject(pickaxeprop)
     end
-  end)
+  })
+
     
   TriggerServerEvent('esx-mining:setMiningStage', "isOccupied", true, mining)
   CreateThread(function()
@@ -89,61 +81,75 @@ RegisterNetEvent('esx-mining:getPan', function()
 end)
 
 RegisterNetEvent('esx-mining:minermenu', function()
-  ESX.UI.Menu.Open('default', GetCurrentResourceName(), 'miner_menu', {
-    title    = Config.Text["MenuHeading"],
-    align    = 'top-left',
-    elements = {
-        {label = Config.Text["PickAxeText"], event = 'esx-mining:getpickaxe'}
-}}, function(data, menu)
-    TriggerEvent(data.current.event)
-    menu.close()
-end, function(data, menu)
-    menu.close()
-end)
+  local elements = {
+    {unselectable = true, icon = '', title = Config.Text['MenuHeading']},
+    {icon = '', title = 'Buy a pickaxe', description = Config.Text['PickAxeText'], value = 'mine'}
+  }
+
+  ESX.OpenContext('right', elements, function(menu, element)
+    if element.value == 'mine' then
+      TriggerEvent('esx-mining:getpickaxe')
+      ESX.CloseContext()
+    end
+  end, function(menu)
+    ESX.CloseContext()
+  end)
 end)
 
 RegisterNetEvent('esx-mining:panmenu', function()
-  ESX.UI.Menu.Open('default', GetCurrentResourceName(), 'pan_menu', {
-    title    = Config.Text["WashHeading"],
-    align    = 'top-left',
-    elements = {
-        {label = Config.Text["PanText"], event = 'esx-mining:getPan'}
-}}, function(data, menu)
-    TriggerEvent(data.current.event)
-    menu.close()
-end, function(data, menu)
-    menu.close()
-end)
+  local elements = {
+    {unselectable = true, icon = '', title = Config.Text['WashHeading']},
+    {icon = '', title = 'Buy a wash pan', description = Config.Text['PanText'], value = 'pan'}
+  }
+
+  ESX.OpenContext('right', elements, function(menu, element)
+    if element.value == 'pan' then
+      TriggerEvent('esx-mining:getPan')
+      ESX.CloseContext()
+    end
+  end, function(menu)
+    ESX.CloseContext()
+  end)
 end)
 
 RegisterNetEvent('esx-mining:smeltmenu', function()
-    ESX.UI.Menu.Open('default', GetCurrentResourceName(), 'smelt_menu', {
-      title    = Config.Text["SmethHeading"],
-      align    = 'top-left',
-      elements = {
-          {label = Config.Text["smelt_IText"], event = 'esx-mining:SmeltIron'},
-          {label = Config.Text["smelt_CText"], event = 'esx-mining:SmeltCopper'},
-          {label = Config.Text["smelt_GText"], event = 'esx-mining:SmeltGold'},
-  }}, function(data, menu)
-      TriggerEvent(data.current.event)
-      menu.close()
-  end, function(data, menu)
-      menu.close()
-  end)
-  end)
+  local elements = {
+    {unselectable = true, icon = '', title = Config.Text['SmethHeading']},
+    {icon = '', title = Config.Text['smelt_IText'], description = 'Smelt your iron down',value = 'iron'},
+    {icon = '', title = Config.Text['smelt_CText'], description = 'Smelt your copper down', value = 'copper'},
+    {icon = '', title = Config.Text['smelt_GText'], description = 'Smelt 4 gold nuggets into 1 gold bar', value = 'gold'},
+  }
 
-  RegisterNetEvent('esx-mining:mine', function(data)
-    local mining = data.location
-        if not Config.MiningLocation[mining]["isMined"] and not Config.MiningLocation[mining]["isOccupied"] then
-          ESX.TriggerServerCallback('esx-mining:pickaxe', function(PickAxe)
-            if PickAxe then
-              StartMining(mining)
-            elseif not PickAxe then
-              ESX.ShowNotification(Config.Text['error_mining'])
-            end
-          end)
-        end
+  ESX.OpenContext('right', elements, function(menu, element)
+    if element.value == 'iron' then
+      TriggerEvent('esx-mining:SmeltIron')
+      ESX.CloseContext()
+    end
+    if element.value == 'copper' then
+      TriggerEvent('esx-mining:SmeltCopper')
+      ESX.CloseContext()
+    end
+    if element.value == 'gold' then
+      TriggerEvent('esx-mining:SmeltGold')
+      ESX.CloseContext()
+    end
+  end, function(menu)
+    ESX.CloseContext()
   end)
+end)
+
+RegisterNetEvent('esx-mining:mine', function(data)
+  local mining = data.location
+  --if not Config.MiningLocation[mining]["isMined"] and not Config.MiningLocation[mining]["isOccupied"] then
+    ESX.TriggerServerCallback('esx-mining:pickaxe', function(PickAxe)
+      if PickAxe then
+        StartMining(mining)
+      elseif not PickAxe then
+        ESX.ShowNotification(Config.Text['error_mining'])
+      end
+    end)
+  --end
+end)
 
 RegisterNetEvent('esx-mining:washingrocks', function()
   ESX.TriggerServerCallback('esx-mining:washpan', function(washingpancheck)
@@ -153,27 +159,20 @@ RegisterNetEvent('esx-mining:washingrocks', function()
           local playerPed = PlayerPedId()
           local coords = GetEntityCoords(playerPed)
           local rockwash = MiningJob.WashingTimer
-          TaskStartScenarioInPlace(playerPed, 'WORLD_HUMAN_BUM_WASH', 0, false)
-            TriggerEvent("mythic_progbar:client:progress", {
-              name = "Washing Stones",
-              duration = rockwash,
-              label = Config.Text['Washing_Rocks'],
-              useWhileDead = false,
-              canCancel = true,
-              controlDisables = {
-                  disableMovement = true,
-                  disableCarMovement = true,
-                  disableMouse = false,
-                  disableCombat = true,
-                },animation = {}}, function(status)
-                  if not status then
+          ESX.Progressbar(Config.Text['Washing_Rocks'], rockwash, {
+            FreezePlayer = true,
+            animation = {
+              type = 'Scenario',
+              Scenario = 'WORLD_HUMAN_BUM_WASH'
+            },
+            onFinish = function()
               ClearPedTasks(PlayerPedId())
               TriggerServerEvent("esx-mining:receivedReward")
-            else
+            end, onCancel = function()
               ClearPedTasks(PlayerPedId())
               ESX.ShowNotification(Config.Text['cancel'])
-            end
-          end)
+            end       
+          })
         else
           ESX.ShowNotification(Config.Text['error_minerstone'])
         end
@@ -189,27 +188,21 @@ RegisterNetEvent('esx-mining:SmeltIron', function()
   ESX.TriggerServerCallback('esx-mining:IronCheck', function(IronCheck)
     if IronCheck then
       local iron = MiningJob.IronTimer
-      --TriggerEvent('animations:client:EmoteCommandStart', {"Warmth"})
-      TriggerEvent("mythic_progbar:client:progress", {
-        name = "smeltIron",
-        duration = iron,
-        label = Config.Text['smelt_iron'],
-        useWhileDead = false,
-        canCancel = true,
-        controlDisables = {
-          disableMovement = true,
-          disableCarMovement = true,
-          disableMouse = false,
-          disableCombat = true,
-        },animation = {}}, function(status)
-        if not status then
-       --   TriggerEvent('animations:client:EmoteCommandStart', {"c"})
+      ESX.Progressbar(Config.Text['smelt_iron'], iron, {
+        FreezePlayer = true,
+        animation = {
+          type = 'anim',
+          dict = 'amb@world_human_stand_fire@male@idle_a',
+          lib = 'idle_a'
+        },
+        onFinish = function()
+          ClearPedTasks(PlayerPedId())
           TriggerServerEvent('esx-mining:IronBar')
-        else
+        end, onCancel = function()
           ClearPedTasks(PlayerPedId())
           ESX.ShowNotification(Config.Text['cancel'])
         end
-      end)
+      })
     else
       ESX.ShowNotification(Config.Text['error_ironCheck'])
     end
@@ -220,27 +213,21 @@ RegisterNetEvent('esx-mining:SmeltCopper', function()
   ESX.TriggerServerCallback('esx-mining:CopperCheck', function(CopperCheck)
     if CopperCheck then
       local copper = MiningJob.CopperTimer
-      --TriggerEvent('animations:client:EmoteCommandStart', {"Warmth"})
-        TriggerEvent("mythic_progbar:client:progress", {
-          name = "SmeltCopper",
-          duration = copper,
-          label = Config.Text['smelt_copper'],
-          useWhileDead = false,
-          canCancel = true,
-          controlDisables = {
-              disableMovement = true,
-              disableCarMovement = true,
-              disableMouse = false,
-              disableCombat = true,
-            },animation = {}}, function(status)
-              if not status then
-          --TriggerEvent('animations:client:EmoteCommandStart', {"c"})
+      ESX.Progressbar(Config.Text['smelt_copper'], copper, {
+        FreezePlayer = true,
+        animation = {
+          type = 'anim',
+          dict = 'amb@world_human_stand_fire@male@idle_a',
+          lib = 'idle_a'
+        },
+        onFinish = function()
+          ClearPedTasks(PlayerPedId())
           TriggerServerEvent('esx-mining:CopperBar')
-        else
+        end, onCancel = function()
           ClearPedTasks(PlayerPedId())
           ESX.ShowNotification(Config.Text['cancel'])
         end
-      end)
+      })
     else
       ESX.ShowNotification(Config.Text['error_copperCheck'])
     end
@@ -251,137 +238,138 @@ RegisterNetEvent('esx-mining:SmeltGold', function()
   ESX.TriggerServerCallback('esx-mining:GoldCheck', function(GoldCheck)
     if GoldCheck then
       local gold = MiningJob.GoldTimer
-     -- TriggerEvent('animations:client:EmoteCommandStart', {"Warmth"})
-        TriggerEvent("mythic_progbar:client:progress", {
-          name = "smeltGold",
-          duration = gold,
-          label = Config.Text['smelt_gold'],
-          useWhileDead = false,
-          canCancel = true,
-          controlDisables = {
-              disableMovement = true,
-              disableCarMovement = true,
-              disableMouse = false,
-              disableCombat = true,
-            },animation = {}}, function(status)
-              if not status then
-        --  TriggerEvent('animations:client:EmoteCommandStart', {"c"})
+      ESX.Progressbar(Config.Text['smelt_gold'], gold, {
+        FreezePlayer = true,
+        animation = {
+          type = 'anim',
+          dict = 'amb@world_human_stand_fire@male@idle_a',
+          lib = 'idle_a'
+        },
+        onFinish = function()
+          ClearPedTasks(PlayerPedId())
           TriggerServerEvent('esx-mining:GoldBar')
-        else
+        end, onCancel = function()
           ClearPedTasks(PlayerPedId())
           ESX.ShowNotification(Config.Text['cancel'])
         end
-      end)
+      })
     else
       ESX.ShowNotification(Config.Text['error_goldCheck'])
     end
   end)
 end)
 
+RegisterNetEvent('esx-mining:sellItems', function()
+  TriggerServerEvent('esx-mining:Seller')
+end)
+
 CreateThread(function()
   for k, v in pairs(Config.MiningLocation) do
-    exports['qtarget']:AddBoxZone("Mining"..k, v.coords, 3.5, 3, {
-      name = "Mining"..k,
-      heading = 15,
-      debugPoly = false,
-      minZ = v.coords - 1,
-      maxZ = v.coords + 1,
-    }, {
+
+    exports.ox_target:addBoxZone({
+      coords = v.coords,
+      size = vec3(3.5,3,2),
+      rotation = 15,
+      debug = drawZones,
       options = {
         {
-          type = "client",
+          name = "Mining"..k,
           event = "esx-mining:mine",
           icon = "Fas Fa-hands",
-          location = k,
-          label = "Start Mining",
-        },
-      },
-      distance = 3.5
+          label = 'Start Mining',
+          canInteract = function(entity, distance, coords, name)
+            return true
+          end
+        }
+      }
     })
   end
-  exports['qtarget']:AddBoxZone("MinerBoss", MiningLocation.targetZone, 1, 1, {
-    name = "MinerBoss",
-    heading = MiningLocation.targetHeading,
-    debugPoly = false,
-    minZ = MiningLocation.minZ,
-    maxZ = MiningLocation.maxZ,
-  }, {
-    options = {
-      {
-        type = "client",
-        event = "esx-mining:minermenu",
-        icon = "Fas Fa-hands",
-        label = Config.Text['MenuTarget'],
-      },
-    },
-    distance = 1.5
+  exports.ox_target:addBoxZone({
+    coords = MiningLocation.targetZone,
+    size = vec3(1,1,1),
+    rotation = MiningLocation.targetHeading,
+      debug = drawZones,
+      options = {
+        {
+          name ='MinerBoss',
+          event = "esx-mining:minermenu",
+          icon = "Fas Fa-hands",
+          label = Config.Text['MenuTarget'],
+          canInteract = function(entity, distance, coords, name)
+            return true
+          end
+        }
+      }
   })
-  exports['qtarget']:AddBoxZone("PanWasher", WashLocation.targetZone, 1, 1, {
-    name = "PanWasher",
-    heading = WashLocation.targetHeading,
-    debugPoly = false,
-    minZ = WashLocation.minZ,
-    maxZ = WashLocation.maxZ,
-  }, {
+  exports.ox_target:addBoxZone({
+    coords = WashLocation.targetZone,
+    size = vec3(1,1,1),
+    rotation = WashLocation.targetHeading,
+    debug = drawZones,
     options = {
       {
-        type = "client",
+        name = 'PanWasher',
         event = "esx-mining:panmenu",
         icon = "Fas Fa-hands",
         label = Config.Text['Menu_pTarget'],
+        canInteract = function(entity, distance, coords, name)
+          return true
+        end
       },
     },
-    distance = 1.5
   })
-  exports['qtarget']:AddBoxZone("Water", vector3(54.77, 3160.31, 25.62), 38.2, 8, {
-    name = "Water",
-    heading = 155,
-    debugPoly = false,
-    minZ=22.82,
-    maxZ=26.62
-  }, {
+  exports.ox_target:addBoxZone({
+    coords = vec3(54.77, 3160.31, 25.62),
+    size =  vec3(2,2,2),
+    rotation = 155,
+    debug = drawZones,
     options = {
       {
-        type = "client",
+        name = "Water",  
         event = "esx-mining:washingrocks",
         icon = "Fas Fa-hands",
         label = Config.Text['Washing_Target'],
-      },
-    },
-    distance = 3.0
+        canInteract = function(entity, distance, coords, name)
+          return true
+        end
+      }
+    }
   })
-  exports['qtarget']:AddBoxZone("smelt", vector3(1086.38, -2003.69, 31.42), 3.8, 3, {
-    name = "smelt",
-    heading = 319,
-    debugPoly = false,
-    minZ = 31.42,
-    maxZ = 32.22
-  }, {
+ -- Smelt ox_target         
+  exports.ox_target:addBoxZone({
+    coords = vec3(1086.3, -2003.96, 30.88),
+    size = vec3(3.9, 4, 4),
+    rotation = 322,
+    debug = drawZones,
     options = {
       {
-        type = "client",
+        name = "smelt",  
         event = "esx-mining:smeltmenu",
         icon = "Fas Fa-hands",
         label = Config.Text['Smeth_Rocks'],
-      },
-    },
-    distance = 1.5
+        canInteract = function(entity, distance, coords, name)
+            return true
+        end
+      }
+    }
   })
-  exports['qtarget']:AddBoxZone("Seller", SellLocation.targetZone, 1, 1, {
-    name = "Seller",
-    heading = SellLocation.targetHeading,
-    debugPoly = false,
-    minZ = SellLocation.minZ,
-    maxZ = SellLocation.maxZ,
-  }, {
+
+  -- Seller ox_target 
+  exports.ox_target:addBoxZone({
+    coords = vec3(SellLocation.targetZone),
+    size = vec3(2, 2, 2),
+    rotation = SellLocation.targetHeading,
+    debug = drawZones,
     options = {
       {
-        type = "server",
-        event = "esx-mining:Seller",
+        name = "Seller",
+        event = "esx-mining:sellItems",
         icon = "Fas Fa-hands",
         label = Config.Text['Seller'],
-      },
-    },
-    distance = 1.5
+        canInteract = function(entity, distance, coords, name)
+          return true
+        end
+      }
+    } 
   })
 end)
